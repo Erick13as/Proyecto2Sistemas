@@ -92,7 +92,7 @@ void createArchive(char *archive_name, char **files_to_pack, int num_files, int 
 
 int main(int argc, char *argv[]) {
     if (argc < 2) {
-        printf("Uso: %s [-v] [-f <archivo_empacado>] <opciones> [archivos]\n", argv[0]);
+        printf("Uso: %s [-v] [--verbose] [-f <archivo_empacado>] [--file <archivo_empacado>] <opciones> [archivos]\n", argv[0]);
         return 1;
     }
 
@@ -107,24 +107,38 @@ int main(int argc, char *argv[]) {
         char *option = argv[i];
 
         if (option[0] == '-') {
-            // Iterar a través de cada carácter en el argumento (excluyendo el guion inicial)
-            for (int j = 1; option[j] != '\0'; j++) {
-                char opt = option[j];
-                printf("%c \n", opt);
+            if (option[1] == '-') {
+                // Forma completa de la opción
+                printf("%s \n", option);
+                if (strcmp(option, "--verbose") == 0) {
+                    verbose = 1;
+                } else if (strcmp(option, "--file") == 0) {
+                    if (argv[i + 1] != NULL) {
+                        archive_name = argv[++i];
+                    } else {
+                        printf("Uso: %s --file <archivo_empacado> [archivos]\n", argv[0]);
+                        return 1;
+                    }
+                }
+            } else {
+                // Forma abreviada de la opción
+                for (int j = 1; option[j] != '\0'; j++) {
+                    char opt = option[j];
+                    printf("%c \n", opt);
 
-                switch (opt) {
-                    case 'v':
-                        verbose = 1;
-                        break;
-                    case 'f':
-                        // Verificar si hay un argumento adicional después de -f
-                        if (argv[i + 1] != NULL) {
-                            archive_name = argv[++i]; // El siguiente argumento es el nombre del archivo empacado
-                        } else {
-                            printf("Uso: %s -f <archivo_empacado> [archivos]\n", argv[0]);
-                            return 1;
-                        }
-                        break;
+                    switch (opt) {
+                        case 'v':
+                            verbose = 1;
+                            break;
+                        case 'f':
+                            if (argv[i + 1] != NULL) {
+                                archive_name = argv[++i];
+                            } else {
+                                printf("Uso: %s -f <archivo_empacado> [archivos]\n", argv[0]);
+                                return 1;
+                            }
+                            break;
+                    }
                 }
             }
         }
@@ -135,24 +149,25 @@ int main(int argc, char *argv[]) {
         char *option = argv[i];
 
         if (option[0] == '-') {
-            // Iterar a través de cada carácter en el argumento (excluyendo el guion inicial)
-            for (int j = 1; option[j] != '\0'; j++) {
-                char opt = option[j];
+            if (option[1] == '-') {
+                // Forma completa de la opción
+                if (strcmp(option, "--create") == 0) {
+                    num_files = argc - i - 4;
+                    files_to_pack = &argv[i + 4];
+                    createArchive(archive_name, files_to_pack, num_files, verbose);
+                }
+            } else {
+                // Forma abreviada de la opción
+                for (int j = 1; option[j] != '\0'; j++) {
+                    char opt = option[j];
 
-                switch (opt) {
-                    case 'c':
-                        // Opción -c: Crear archivo empacado
-                        // Verificar si hay al menos un archivo para empacar
-                        if (argc <= i + 1) {
-                            printf("Uso: %s -c -f <archivo_empacado> [archivos]\n", argv[0]);
-                            return 1;
-                        }
-                        
-                        num_files = argc - i - 2; // Calcular la cantidad de archivos a empacar
-                        files_to_pack = &argv[i + 2]; // Los archivos a empacar comienzan desde el siguiente argumento
-                        createArchive(archive_name, files_to_pack, num_files, verbose);
-                        // No retornamos aquí para permitir que el programa continúe procesando opciones
-                        break;
+                    switch (opt) {
+                        case 'c':
+                            num_files = argc - i - 2;
+                            files_to_pack = &argv[i + 2];
+                            createArchive(archive_name, files_to_pack, num_files, verbose);
+                            break;
+                    }
                 }
             }
         }
@@ -163,3 +178,4 @@ int main(int argc, char *argv[]) {
 
 //gcc star2.c -o star
 //./star -cvf prueba-paq.tar prueba.txt
+//./star --create --verbose --file prueba-paq.tar prueba.txt
