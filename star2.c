@@ -125,6 +125,21 @@ int main(int argc, char *argv[]) {
                             return 1;
                         }
                         break;
+                }
+            }
+        }
+    }
+
+    // Llamar a la función correspondiente después de procesar todas las opciones
+    for (i = 1; i < argc; i++) {
+        char *option = argv[i];
+
+        if (option[0] == '-') {
+            // Iterar a través de cada carácter en el argumento (excluyendo el guion inicial)
+            for (int j = 1; option[j] != '\0'; j++) {
+                char opt = option[j];
+
+                switch (opt) {
                     case 'c':
                         // Opción -c: Crear archivo empacado
                         // Verificar si hay al menos un archivo para empacar
@@ -133,22 +148,17 @@ int main(int argc, char *argv[]) {
                             return 1;
                         }
                         
-                        archive_name = argv[i + 1]; // El siguiente argumento es el nombre del archivo empacado
                         num_files = argc - i - 2; // Calcular la cantidad de archivos a empacar
                         files_to_pack = &argv[i + 2]; // Los archivos a empacar comienzan desde el siguiente argumento
                         createArchive(archive_name, files_to_pack, num_files, verbose);
                         // No retornamos aquí para permitir que el programa continúe procesando opciones
                         break;
-                    default:
-                        printf("Opción no válida: %c\n", opt);
-                        return 1;
                 }
             }
         }
     }
 
-    //printf("Uso: %s [-v] [-f <archivo_empacado>] <opciones> [archivos]\n", argv[0]);
-    return 1;
+    return 0;
 }
 
 //gcc star2.c -o star
