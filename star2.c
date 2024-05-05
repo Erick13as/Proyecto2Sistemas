@@ -154,13 +154,11 @@ int main(int argc, char *argv[]) {
                 if (strcmp(option, "--create") == 0) {
                     for (i = 1; i < argc; i++) {
                         if (strcmp(argv[i], archive_name) == 0) {
-                            int j;
-                            for (j = i + 1; j < argc; j++) {
-                                if (argv[j][0] != '-') {
-                                    break;
-                                }
+                            int j = i + 1;
+                            while (j < argc && argv[j][0] != '-') {
+                                j++;
                             }
-                            num_files = j - i;
+                            num_files = j - i - 1;
                             files_to_pack = &argv[i + 1];
                             createArchive(archive_name, files_to_pack, num_files, verbose);
                             break;
@@ -176,13 +174,11 @@ int main(int argc, char *argv[]) {
                         case 'c':
                             for (i = 1; i < argc; i++) {
                                 if (strcmp(argv[i], archive_name) == 0) {
-                                    int j;
-                                    for (j = i + 1; j < argc; j++) {
-                                        if (argv[j][0] != '-') {
-                                            break;
-                                        }
+                                    int j = i + 1;
+                                    while (j < argc && argv[j][0] != '-') {
+                                        j++;
                                     }
-                                    num_files = j - i;
+                                    num_files = j - i - 1;
                                     files_to_pack = &argv[i + 1];
                                     createArchive(archive_name, files_to_pack, num_files, verbose);
                                     break;
@@ -200,3 +196,4 @@ int main(int argc, char *argv[]) {
 //gcc star2.c -o star
 //./star -cvf prueba-paq.tar prueba.txt
 //./star --create --verbose --file prueba-paq.tar prueba.txt
+//./star -cvf prueba-paq.tar prueba.txt prueba2.docx
