@@ -152,9 +152,20 @@ int main(int argc, char *argv[]) {
             if (option[1] == '-') {
                 // Forma completa de la opción
                 if (strcmp(option, "--create") == 0) {
-                    num_files = argc - i - 4;
-                    files_to_pack = &argv[i + 4];
-                    createArchive(archive_name, files_to_pack, num_files, verbose);
+                    for (i = 1; i < argc; i++) {
+                        if (strcmp(argv[i], archive_name) == 0) {
+                            int j;
+                            for (j = i + 1; j < argc; j++) {
+                                if (argv[j][0] != '-') {
+                                    break;
+                                }
+                            }
+                            num_files = j - i;
+                            files_to_pack = &argv[i + 1];
+                            createArchive(archive_name, files_to_pack, num_files, verbose);
+                            break;
+                        }
+                    }
                 }
             } else {
                 // Forma abreviada de la opción
@@ -163,10 +174,20 @@ int main(int argc, char *argv[]) {
 
                     switch (opt) {
                         case 'c':
-                            num_files = argc - i - 2;
-                            files_to_pack = &argv[i + 2];
-                            createArchive(archive_name, files_to_pack, num_files, verbose);
-                            break;
+                            for (i = 1; i < argc; i++) {
+                                if (strcmp(argv[i], archive_name) == 0) {
+                                    int j;
+                                    for (j = i + 1; j < argc; j++) {
+                                        if (argv[j][0] != '-') {
+                                            break;
+                                        }
+                                    }
+                                    num_files = j - i;
+                                    files_to_pack = &argv[i + 1];
+                                    createArchive(archive_name, files_to_pack, num_files, verbose);
+                                    break;
+                                }
+                            }
                     }
                 }
             }
