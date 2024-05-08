@@ -248,7 +248,6 @@ int main(int argc, char *argv[]) {
                             break;
                         case 'f':
                             archive_name = processFileOption(argc, argv);
-                            printf("%s \n", archive_name);
                             if (archive_name == NULL) {
                                 return 1;
                             }
@@ -310,3 +309,4 @@ int main(int argc, char *argv[]) {
 //./star -cvf prueba-paq.tar prueba.txt
 //./star --create --verbose --file prueba-paq.tar prueba.txt
 //./star -cvf prueba-paq.tar prueba.txt prueba2.docx
+//./star -uvf prueba-paq.tar prueba.txt
