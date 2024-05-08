@@ -164,6 +164,41 @@ void updateArchive(char *archive_name, char **files_to_update, int num_files, in
     }
 }
 
+// Función para listar los nombres de los archivos dentro del archivo empacado
+void listArchiveContents(char *archive_name, int verbose) {
+    // Abrir el archivo empacado en modo lectura
+    FILE *archive = fopen(archive_name, "rb");
+    if (!archive) {
+        printf("Error: No se pudo abrir el archivo empacado %s.\n", archive_name);
+        return;
+    }
+
+    if (verbose) {
+        printf("Listando contenidos del archivo empacado: %s\n", archive_name);
+    }
+
+    // Leer la estructura FAT
+    FAT fat;
+    fread(&fat, sizeof(FAT), 1, archive);
+
+    // Leer las entradas de archivo desde el archivo empacado y listar los nombres de los archivos
+    FileEntry file_entries[BLOCK_SIZE / sizeof(FileEntry)];
+    fread(file_entries, sizeof(FileEntry), BLOCK_SIZE / sizeof(FileEntry), archive);
+
+    printf("Contenidos del archivo empacado:\n");
+    for (int i = 0; i < BLOCK_SIZE / sizeof(FileEntry); i++) {
+        if (file_entries[i].filename[0] != '\0') {
+            printf("%s\n", file_entries[i].filename);
+        } else {
+            // Si encontramos una entrada de archivo vacía, no hay más archivos que listar
+            break;
+        }
+    }
+
+    // Cerrar el archivo empacado
+    fclose(archive);
+}
+
 // Función obtner el nombre del archivo
 char* processFileOption(int argc, char *argv[]) {
     char *archive_name = NULL;
@@ -264,6 +299,8 @@ int main(int argc, char *argv[]) {
                     createArchive(archive_name, files_to_use, num_files, verbose);
                 } else if (strcmp(option, "--update") == 0) {
                     updateArchive(archive_name, files_to_use, num_files, verbose);
+                }else if (strcmp(option, "--list") == 0) {
+                    listArchiveContents(archive_name, verbose);
                 }
                 
             } else {
@@ -277,6 +314,9 @@ int main(int argc, char *argv[]) {
                             break;
                         case 'u':
                             updateArchive(archive_name, files_to_use, num_files, verbose);
+                            break;
+                        case 't':
+                            listArchiveContents(archive_name, verbose);
                             break;
                     }
                 }
@@ -292,3 +332,4 @@ int main(int argc, char *argv[]) {
 //./star --create --verbose --file prueba-paq.tar prueba.txt
 //./star -cvf prueba-paq.tar prueba.txt prueba2.docx
 //./star -uvf prueba-paq.tar prueba.txt
+//./star -tvf prueba-paq.tar
