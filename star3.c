@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdint.h>
 
-#define BLOCK_SIZE 256 * 1024
+#define BLOCK_SIZE (256 * 1024)
 
 // Estructura para la tabla de asignación de archivos (FAT)
 typedef struct {
@@ -206,6 +206,7 @@ int main(int argc, char *argv[]) {
                                     break;
                                 }
                             }
+                            break;
                     }
                 }
             }
@@ -215,7 +216,7 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
-//gcc star2.c -o star
+//gcc star3.c -o star
 //./star -cvf prueba-paq.tar prueba.txt
 //./star --create --verbose --file prueba-paq.tar prueba.txt
 //./star -cvf prueba-paq.tar prueba.txt prueba2.docx
