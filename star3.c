@@ -166,26 +166,27 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    for (i = 1; i < argc; i++) {
+        if (strcmp(argv[i], archive_name) == 0) {
+            int j = i + 1;
+            while (j < argc && argv[j][0] != '-') {
+                j++;
+            }
+            num_files = j - i - 1;
+            files_to_use = &argv[i + 1];
+        }
+    }
+
     // Llamar a la función correspondiente después de procesar todas las opciones
     for (i = 1; i < argc; i++) {
+        
         char *option = argv[i];
 
         if (option[0] == '-') {
             if (option[1] == '-') {
                 // Forma completa de la opción
                 if (strcmp(option, "--create") == 0) {
-                    for (i = 1; i < argc; i++) {
-                        if (strcmp(argv[i], archive_name) == 0) {
-                            int j = i + 1;
-                            while (j < argc && argv[j][0] != '-') {
-                                j++;
-                            }
-                            num_files = j - i - 1;
-                            files_to_use = &argv[i + 1];
-                            createArchive(archive_name, files_to_use, num_files, verbose);
-                            break;
-                        }
-                    }
+                    createArchive(archive_name, files_to_use, num_files, verbose);
                 }
             } else {
                 // Forma abreviada de la opción
@@ -194,18 +195,7 @@ int main(int argc, char *argv[]) {
 
                     switch (opt) {
                         case 'c':
-                            for (i = 1; i < argc; i++) {
-                                if (strcmp(argv[i], archive_name) == 0) {
-                                    int j = i + 1;
-                                    while (j < argc && argv[j][0] != '-') {
-                                        j++;
-                                    }
-                                    num_files = j - i - 1;
-                                    files_to_use = &argv[i + 1];
-                                    createArchive(archive_name, files_to_use, num_files, verbose);
-                                    break;
-                                }
-                            }
+                            createArchive(archive_name, files_to_use, num_files, verbose);
                             break;
                     }
                 }
