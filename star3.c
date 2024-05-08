@@ -97,7 +97,7 @@ int main(int argc, char *argv[]) {
     }
 
     char *archive_name = NULL;
-    char **files_to_pack = NULL;
+    char **files_to_use = NULL;
     int num_files = 0;
     int verbose = 0;
 
@@ -181,8 +181,8 @@ int main(int argc, char *argv[]) {
                                 j++;
                             }
                             num_files = j - i - 1;
-                            files_to_pack = &argv[i + 1];
-                            createArchive(archive_name, files_to_pack, num_files, verbose);
+                            files_to_use = &argv[i + 1];
+                            createArchive(archive_name, files_to_use, num_files, verbose);
                             break;
                         }
                     }
@@ -201,8 +201,8 @@ int main(int argc, char *argv[]) {
                                         j++;
                                     }
                                     num_files = j - i - 1;
-                                    files_to_pack = &argv[i + 1];
-                                    createArchive(archive_name, files_to_pack, num_files, verbose);
+                                    files_to_use = &argv[i + 1];
+                                    createArchive(archive_name, files_to_use, num_files, verbose);
                                     break;
                                 }
                             }
