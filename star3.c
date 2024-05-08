@@ -182,6 +182,32 @@ void updateArchive(char *archive_name, char **files_to_update, int num_files, in
     }
 }
 
+// Función obtner el nombre del archivo
+char* processFileOption(int argc, char *argv[]) {
+    char *archive_name = NULL;
+    int i;
+
+    int next_arg_index = i + 1;
+    while (next_arg_index < argc && argv[next_arg_index][0] == '-') {
+        next_arg_index++;
+    }
+    if (next_arg_index < argc) {
+        char *potential_name = argv[next_arg_index];
+        int name_length = strlen(potential_name);
+        if (name_length >= 4 && strcmp(potential_name + name_length - 4, ".tar") == 0) {
+            archive_name = argv[next_arg_index];
+        } else {
+            printf("El nombre del archivo empacado debe terminar con \".tar\".\n");
+            return NULL;
+        }
+    } else {
+        printf("Uso: %s -f <archivo_empacado> [archivos]\n", argv[0]);
+        return NULL;
+    }
+
+    return archive_name;
+}
+
 int main(int argc, char *argv[]) {
     if (argc < 2) {
         printf("Uso: %s [-v] [--verbose] [-f <archivo_empacado>] [--file <archivo_empacado>] <opciones> [archivos]\n", argv[0]);
@@ -203,23 +229,10 @@ int main(int argc, char *argv[]) {
                 // Forma completa de la opción
                 printf("%s \n", option);
                 if (strcmp(option, "--verbose") == 0) {
-                    verbose = 1;
+                    verbose++;
                 } else if (strcmp(option, "--file") == 0) {
-                    int next_arg_index = i + 1;
-                    while (next_arg_index < argc && argv[next_arg_index][0] == '-') {
-                        next_arg_index++;
-                    }
-                    if (next_arg_index < argc) {
-                        char *potential_name = argv[next_arg_index];
-                        int name_length = strlen(potential_name);
-                        if (name_length >= 4 && strcmp(potential_name + name_length - 4, ".tar") == 0) {
-                            archive_name = argv[next_arg_index];
-                        } else {
-                            printf("El nombre del archivo empacado debe terminar con \".tar\".\n");
-                            return 1;
-                        }
-                    } else {
-                        printf("Uso: %s --file <archivo_empacado> [archivos]\n", argv[0]);
+                    archive_name = processFileOption(argc, argv);
+                    if (archive_name == NULL) {
                         return 1;
                     }
                 }
@@ -231,24 +244,12 @@ int main(int argc, char *argv[]) {
 
                     switch (opt) {
                         case 'v':
-                            verbose = 1;
+                            verbose++;
                             break;
                         case 'f':
-                            int next_arg_index = i + 1;
-                            while (next_arg_index < argc && argv[next_arg_index][0] == '-') {
-                                next_arg_index++;
-                            }
-                            if (next_arg_index < argc) {
-                                char *potential_name = argv[next_arg_index];
-                                int name_length = strlen(potential_name);
-                                if (name_length >= 4 && strcmp(potential_name + name_length - 4, ".tar") == 0) {
-                                    archive_name = argv[next_arg_index];
-                                } else {
-                                    printf("El nombre del archivo empacado debe terminar con \".tar\".\n");
-                                    return 1;
-                                }
-                            } else {
-                                printf("Uso: %s -f <archivo_empacado> [archivos]\n", argv[0]);
+                            archive_name = processFileOption(argc, argv);
+                            printf("%s \n", archive_name);
+                            if (archive_name == NULL) {
                                 return 1;
                             }
                             break;
