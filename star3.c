@@ -90,6 +90,98 @@ void createArchive(char *archive_name, char **files_to_pack, int num_files, int 
     }
 }
 
+// Función para actualizar un archivo existente dentro del archivo empacado
+void updateArchive(char *archive_name, char **files_to_update, int num_files, int verbose) {
+    // Abrir el archivo empacado en modo lectura y escritura
+    FILE *archive = fopen(archive_name, "r+b");
+    if (!archive) {
+        printf("Error: No se pudo abrir el archivo empacado %s.\n", archive_name);
+        return;
+    }
+
+    if (verbose) {
+        printf("Actualizando archivo empacado: %s\n", archive_name);
+    }
+
+    // Leer el contenido del archivo tar y las entradas de archivo
+    fseek(archive, 0, SEEK_END);
+    uint64_t archive_size = ftell(archive);
+    fseek(archive, sizeof(FAT), SEEK_SET);
+
+    // Leer las entradas de archivo desde el archivo empacado
+    FileEntry file_entries[num_files];
+    fread(file_entries, sizeof(FileEntry), num_files, archive);
+
+    // Buscar los archivos a actualizar en las entradas de archivo
+    for (int i = 0; i < num_files; i++) {
+        char *filename = files_to_update[i];
+        int file_found = 0;
+
+        // Buscar el archivo en las entradas de archivo por su ruta completa
+        for (int j = 0; j < num_files; j++) {
+            if (strcmp(file_entries[j].filename, filename) == 0) {
+                // El archivo fue encontrado, actualizar su contenido
+                file_found = 1;
+                uint64_t offset = file_entries[j].offset;
+                uint64_t size = file_entries[j].size;
+
+                // Mover el puntero de lectura/escritura al inicio del archivo dentro del archivo empacado
+                fseek(archive, offset, SEEK_SET);
+
+                // Leer el contenido del archivo original
+                char *buffer = (char *)malloc(size);
+                fread(buffer, size, 1, archive);
+
+                // Cerrar el archivo para abrirlo en modo escritura
+                fclose(archive);
+                archive = fopen(archive_name, "r+b");
+                if (!archive) {
+                    printf("Error: No se pudo abrir el archivo empacado %s.\n", archive_name);
+                    free(buffer);
+                    return;
+                }
+                fseek(archive, offset, SEEK_SET);
+
+                // Abrir el archivo a actualizar en modo lectura
+                FILE *updated_file = fopen(filename, "rb");
+                if (!updated_file) {
+                    printf("Error: No se pudo abrir el archivo %s.\n", filename);
+                    free(buffer);
+                    continue;
+                }
+
+                // Escribir el contenido actualizado al archivo empacado
+                while (!feof(updated_file)) {
+                    size_t bytes_read = fread(buffer, 1, BLOCK_SIZE, updated_file);
+                    if (bytes_read == 0) break;
+                    fwrite(buffer, 1, bytes_read, archive);
+                }
+
+                // Cerrar el archivo actualizado
+                fclose(updated_file);
+                free(buffer);
+
+                if (verbose) {
+                    printf("Archivo actualizado en el archivo empacado: %s\n", filename);
+                }
+
+                break;
+            }
+        }
+
+        if (!file_found) {
+            printf("Error: El archivo %s no existe en el archivo empacado.\n", filename);
+        }
+    }
+
+    // Cerrar el archivo empacado
+    fclose(archive);
+
+    if (verbose) {
+        printf("Archivo empacado actualizado con éxito: %s\n", archive_name);
+    }
+}
+
 int main(int argc, char *argv[]) {
     if (argc < 2) {
         printf("Uso: %s [-v] [--verbose] [-f <archivo_empacado>] [--file <archivo_empacado>] <opciones> [archivos]\n", argv[0]);
@@ -166,6 +258,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    //Archivos a usar
     for (i = 1; i < argc; i++) {
         if (strcmp(argv[i], archive_name) == 0) {
             int j = i + 1;
@@ -187,7 +280,10 @@ int main(int argc, char *argv[]) {
                 // Forma completa de la opción
                 if (strcmp(option, "--create") == 0) {
                     createArchive(archive_name, files_to_use, num_files, verbose);
+                } else if (strcmp(option, "--update") == 0) {
+                    updateArchive(archive_name, files_to_use, num_files, verbose);
                 }
+                
             } else {
                 // Forma abreviada de la opción
                 for (int j = 1; option[j] != '\0'; j++) {
@@ -196,6 +292,9 @@ int main(int argc, char *argv[]) {
                     switch (opt) {
                         case 'c':
                             createArchive(archive_name, files_to_use, num_files, verbose);
+                            break;
+                        case 'u':
+                            updateArchive(archive_name, files_to_use, num_files, verbose);
                             break;
                     }
                 }
