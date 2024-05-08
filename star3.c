@@ -199,6 +199,98 @@ void listArchiveContents(char *archive_name, int verbose) {
     fclose(archive);
 }
 
+// Función para agregar nuevos archivos al archivo empacado
+void appendArchive(char *archive_name, char **files_to_append, int num_files, int verbose) {
+    // Abrir el archivo empacado en modo lectura y escritura
+    FILE *archive = fopen(archive_name, "r+b");
+    if (!archive) {
+        printf("Error: No se pudo abrir el archivo empacado %s.\n", archive_name);
+        return;
+    }
+
+    if (verbose) {
+        printf("Agregando nuevos archivos al archivo empacado: %s\n", archive_name);
+    }
+
+    // Leer el contenido del archivo tar y las entradas de archivo
+    fseek(archive, 0, SEEK_END);
+    uint64_t archive_size = ftell(archive);
+    fseek(archive, sizeof(FAT), SEEK_SET);
+
+    // Leer las entradas de archivo desde el archivo empacado
+    FileEntry file_entries[BLOCK_SIZE / sizeof(FileEntry)];
+    fread(file_entries, sizeof(FileEntry), BLOCK_SIZE / sizeof(FileEntry), archive);
+
+    // Encontrar una entrada de archivo vacía para agregar los nuevos archivos
+    int empty_entry_index = -1;
+    for (int i = 0; i < BLOCK_SIZE / sizeof(FileEntry); i++) {
+        if (file_entries[i].filename[0] == '\0') {
+            empty_entry_index = i;
+            break;
+        }
+    }
+
+    // Si no se encuentra una entrada de archivo vacía, el archivo empacado está lleno
+    if (empty_entry_index == -1) {
+        printf("Error: No hay suficiente espacio para agregar nuevos archivos al archivo empacado.\n");
+        fclose(archive);
+        return;
+    }
+
+    // Para cada archivo a agregar
+    for (int i = 0; i < num_files; i++) {
+        char *new_file = files_to_append[i];
+
+        // Obtener información sobre el nuevo archivo
+        FILE *new_file_ptr = fopen(new_file, "rb");
+        if (!new_file_ptr) {
+            printf("Error: No se pudo abrir el nuevo archivo %s.\n", new_file);
+            continue;
+        }
+
+        fseek(new_file_ptr, 0, SEEK_END);
+        uint64_t new_file_size = ftell(new_file_ptr);
+        fseek(new_file_ptr, 0, SEEK_SET);
+
+        // Mover el puntero de lectura/escritura al final del archivo empacado
+        fseek(archive, 0, SEEK_END);
+
+        // Leer el contenido del nuevo archivo y escribirlo al archivo empacado
+        char buffer[BLOCK_SIZE];
+        while (1) {
+            size_t bytes_read = fread(buffer, 1, BLOCK_SIZE, new_file_ptr);
+            if (bytes_read == 0) break;
+            fwrite(buffer, 1, bytes_read, archive);
+        }
+
+        // Guardar la entrada de archivo para el nuevo archivo en las estructuras FAT y de entradas de archivo
+        strcpy(file_entries[empty_entry_index].filename, new_file);
+        file_entries[empty_entry_index].offset = archive_size;
+        file_entries[empty_entry_index].size = new_file_size;
+
+        // Actualizar el índice de la próxima entrada de archivo vacía
+        empty_entry_index++;
+
+        // Escribir las entradas de archivo actualizadas al archivo empacado
+        fseek(archive, sizeof(FAT), SEEK_SET);
+        fwrite(file_entries, sizeof(FileEntry), BLOCK_SIZE / sizeof(FileEntry), archive);
+
+        // Cerrar el archivo nuevo
+        fclose(new_file_ptr);
+
+        if (verbose) {
+            printf("Nuevo archivo agregado con éxito al archivo empacado: %s\n", new_file);
+        }
+    }
+
+    // Cerrar el archivo empacado
+    fclose(archive);
+
+    if (verbose) {
+        printf("Todos los nuevos archivos han sido agregados al archivo empacado: %s\n", archive_name);
+    }
+}
+
 // Función obtner el nombre del archivo
 char* processFileOption(int argc, char *argv[]) {
     char *archive_name = NULL;
@@ -301,6 +393,8 @@ int main(int argc, char *argv[]) {
                     updateArchive(archive_name, files_to_use, num_files, verbose);
                 }else if (strcmp(option, "--list") == 0) {
                     listArchiveContents(archive_name, verbose);
+                }else if (strcmp(option, "--append") == 0) {
+                    appendArchive(archive_name, files_to_use, num_files, verbose);
                 }
                 
             } else {
@@ -318,6 +412,9 @@ int main(int argc, char *argv[]) {
                         case 't':
                             listArchiveContents(archive_name, verbose);
                             break;
+                        case 'r':
+                            appendArchive(archive_name, files_to_use, num_files, verbose);
+                            break;
                     }
                 }
             }
@@ -333,3 +430,4 @@ int main(int argc, char *argv[]) {
 //./star -cvf prueba-paq.tar prueba.txt prueba2.docx
 //./star -uvf prueba-paq.tar prueba.txt
 //./star -tvf prueba-paq.tar
+//./star -rvf prueba-paq.tar prueba2.docx
