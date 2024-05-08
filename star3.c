@@ -80,6 +80,7 @@ void createArchive(char *archive_name, char **files_to_pack, int num_files, int 
     }
 
     // Escribir las entradas de archivo al archivo empacado
+    fseek(archive, sizeof(FAT), SEEK_SET);
     fwrite(file_entries, sizeof(FileEntry), num_files, archive);
 
     // Cerrar el archivo empacado
@@ -117,7 +118,7 @@ void updateArchive(char *archive_name, char **files_to_update, int num_files, in
         char *filename = files_to_update[i];
         int file_found = 0;
 
-        // Buscar el archivo en las entradas de archivo por su ruta completa
+        // Buscar el archivo en las entradas de archivo por su nombre
         for (int j = 0; j < num_files; j++) {
             if (strcmp(file_entries[j].filename, filename) == 0) {
                 // El archivo fue encontrado, actualizar su contenido
@@ -129,37 +130,18 @@ void updateArchive(char *archive_name, char **files_to_update, int num_files, in
                 fseek(archive, offset, SEEK_SET);
 
                 // Leer el contenido del archivo original
-                char *buffer = (char *)malloc(size);
-                fread(buffer, size, 1, archive);
-
-                // Cerrar el archivo para abrirlo en modo escritura
-                fclose(archive);
-                archive = fopen(archive_name, "r+b");
-                if (!archive) {
-                    printf("Error: No se pudo abrir el archivo empacado %s.\n", archive_name);
-                    free(buffer);
-                    return;
-                }
-                fseek(archive, offset, SEEK_SET);
-
-                // Abrir el archivo a actualizar en modo lectura
+                char buffer[BLOCK_SIZE];
                 FILE *updated_file = fopen(filename, "rb");
                 if (!updated_file) {
                     printf("Error: No se pudo abrir el archivo %s.\n", filename);
-                    free(buffer);
                     continue;
                 }
-
-                // Escribir el contenido actualizado al archivo empacado
-                while (!feof(updated_file)) {
+                while (1) {
                     size_t bytes_read = fread(buffer, 1, BLOCK_SIZE, updated_file);
                     if (bytes_read == 0) break;
                     fwrite(buffer, 1, bytes_read, archive);
                 }
-
-                // Cerrar el archivo actualizado
                 fclose(updated_file);
-                free(buffer);
 
                 if (verbose) {
                     printf("Archivo actualizado en el archivo empacado: %s\n", filename);
