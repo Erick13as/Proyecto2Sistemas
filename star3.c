@@ -212,10 +212,9 @@ void appendArchive(char *archive_name, char **files_to_append, int num_files, in
         printf("Agregando nuevos archivos al archivo empacado: %s\n", archive_name);
     }
 
-    // Leer el contenido del archivo tar y las entradas de archivo
-    fseek(archive, 0, SEEK_END);
-    uint64_t archive_size = ftell(archive);
-    fseek(archive, sizeof(FAT), SEEK_SET);
+    // Leer la estructura FAT
+    FAT fat;
+    fread(&fat, sizeof(FAT), 1, archive);
 
     // Leer las entradas de archivo desde el archivo empacado
     FileEntry file_entries[BLOCK_SIZE / sizeof(FileEntry)];
@@ -230,32 +229,60 @@ void appendArchive(char *archive_name, char **files_to_append, int num_files, in
         }
     }
 
-    // Si no se encuentra una entrada de archivo vacía, el archivo empacado está lleno
-    if (empty_entry_index == -1) {
-        printf("Error: No hay suficiente espacio para agregar nuevos archivos al archivo empacado.\n");
-        fclose(archive);
-        return;
+    // Calcular el espacio disponible actual en el archivo empacado
+    uint64_t space_available = 0;
+    for (int i = 0; i < BLOCK_SIZE / sizeof(uint64_t); i++) {
+        if (fat.is_free[i]) {
+            space_available += BLOCK_SIZE;
+        }
     }
 
-    // Para cada archivo a agregar
+    // Verificar si hay suficiente espacio para los nuevos archivos
+    uint64_t total_file_size = 0;
     for (int i = 0; i < num_files; i++) {
-        char *new_file = files_to_append[i];
-
-        // Obtener información sobre el nuevo archivo
-        FILE *new_file_ptr = fopen(new_file, "rb");
+        FILE *new_file_ptr = fopen(files_to_append[i], "rb");
         if (!new_file_ptr) {
-            printf("Error: No se pudo abrir el nuevo archivo %s.\n", new_file);
+            printf("Error: No se pudo abrir el nuevo archivo %s.\n", files_to_append[i]);
             continue;
         }
+        fseek(new_file_ptr, 0, SEEK_END);
+        total_file_size += ftell(new_file_ptr);
+        fclose(new_file_ptr);
+    }
 
+    if (total_file_size > space_available) {
+        // Expandir el archivo empacado si no hay suficiente espacio
+        uint64_t additional_space = total_file_size - space_available;
+        fseek(archive, 0, SEEK_END);
+        for (uint64_t i = 0; i < additional_space; i++) {
+            fputc('\0', archive);
+        }
+        printf("El archivo empacado se ha ampliado en %lu bytes.\n", additional_space);
+    }
+
+    // Agregar los nuevos archivos al archivo empacado
+    for (int i = 0; i < num_files; i++) {
+        FILE *new_file_ptr = fopen(files_to_append[i], "rb");
+        if (!new_file_ptr) {
+            printf("Error: No se pudo abrir el nuevo archivo %s.\n", files_to_append[i]);
+            continue;
+        }
         fseek(new_file_ptr, 0, SEEK_END);
         uint64_t new_file_size = ftell(new_file_ptr);
         fseek(new_file_ptr, 0, SEEK_SET);
 
-        // Mover el puntero de lectura/escritura al final del archivo empacado
-        fseek(archive, 0, SEEK_END);
+        // Buscar el primer bloque libre para el nuevo archivo
+        uint64_t block_offset = 0;
+        for (uint64_t j = 0; j < BLOCK_SIZE / sizeof(uint64_t); j++) {
+            if (fat.is_free[j]) {
+                fat.is_free[j] = 0;
+                block_offset = j * BLOCK_SIZE;
+                break;
+            }
+        }
 
-        // Leer el contenido del nuevo archivo y escribirlo al archivo empacado
+        // Copiar el contenido del nuevo archivo al archivo empacado
+        fseek(archive, block_offset, SEEK_SET);
         char buffer[BLOCK_SIZE];
         while (1) {
             size_t bytes_read = fread(buffer, 1, BLOCK_SIZE, new_file_ptr);
@@ -264,24 +291,23 @@ void appendArchive(char *archive_name, char **files_to_append, int num_files, in
         }
 
         // Guardar la entrada de archivo para el nuevo archivo en las estructuras FAT y de entradas de archivo
-        strcpy(file_entries[empty_entry_index].filename, new_file);
-        file_entries[empty_entry_index].offset = archive_size;
+        strcpy(file_entries[empty_entry_index].filename, files_to_append[i]);
+        file_entries[empty_entry_index].offset = block_offset;
         file_entries[empty_entry_index].size = new_file_size;
 
-        // Actualizar el índice de la próxima entrada de archivo vacía
         empty_entry_index++;
 
-        // Escribir las entradas de archivo actualizadas al archivo empacado
-        fseek(archive, sizeof(FAT), SEEK_SET);
-        fwrite(file_entries, sizeof(FileEntry), BLOCK_SIZE / sizeof(FileEntry), archive);
-
-        // Cerrar el archivo nuevo
         fclose(new_file_ptr);
 
         if (verbose) {
-            printf("Nuevo archivo agregado con éxito al archivo empacado: %s\n", new_file);
+            printf("Nuevo archivo agregado con éxito al archivo empacado: %s\n", files_to_append[i]);
         }
     }
+
+    // Escribir las estructuras FAT y las entradas de archivo actualizadas al archivo empacado
+    fseek(archive, 0, SEEK_SET);
+    fwrite(&fat, sizeof(FAT), 1, archive);
+    fwrite(file_entries, sizeof(FileEntry), BLOCK_SIZE / sizeof(FileEntry), archive);
 
     // Cerrar el archivo empacado
     fclose(archive);
