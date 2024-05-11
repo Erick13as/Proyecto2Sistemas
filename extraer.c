@@ -4,10 +4,14 @@
 
 #define BLOCK_SIZE (256 * 1024)
 #define MAX_FILENAME_LEN 255
+#define MAX_FILES 100
 
 typedef struct {
     char filename[MAX_FILENAME_LEN + 1];
     long file_size;
+    long offset;
+    int num_blocks;
+    long block_positions[MAX_FILES];
 } FileEntry;
 
 void extract_files_from_tar(const char *tar_filename) {
@@ -21,24 +25,25 @@ void extract_files_from_tar(const char *tar_filename) {
     int num_files;
     fread(&num_files, sizeof(int), 1, tar_file);
 
+    // Read file entries
+    FileEntry file_entries[MAX_FILES];
+    fread(file_entries, sizeof(FileEntry), num_files, tar_file);
+
     // Extract each file from TAR
     for (int i = 0; i < num_files; i++) {
-        FileEntry entry;
-        fread(&entry, sizeof(FileEntry), 1, tar_file);
-
-        FILE *file = fopen(entry.filename, "wb");
+        FILE *file = fopen(file_entries[i].filename, "wb");
         if (!file) {
-            printf("Unable to create file %s\n", entry.filename);
+            printf("Unable to create file %s\n", file_entries[i].filename);
             continue;
         }
 
-        // Read file contents block by block
-        char buffer[BLOCK_SIZE];
-        size_t bytes_to_read = entry.file_size;
-        while (bytes_to_read > 0) {
-            size_t bytes_read = fread(buffer, 1, bytes_to_read < BLOCK_SIZE ? bytes_to_read : BLOCK_SIZE, tar_file);
-            fwrite(buffer, 1, bytes_read, file);
-            bytes_to_read -= bytes_read;
+        // Read each block of the file
+        for (int j = 0; j < file_entries[i].num_blocks; j++) {
+            fseek(tar_file, file_entries[i].block_positions[j], SEEK_SET);
+            char buffer[BLOCK_SIZE];
+            size_t bytes_to_read = (j == file_entries[i].num_blocks - 1) ? file_entries[i].file_size - (j * BLOCK_SIZE) : BLOCK_SIZE;
+            fread(buffer, 1, bytes_to_read, tar_file);
+            fwrite(buffer, 1, bytes_to_read, file);
         }
 
         fclose(file);
