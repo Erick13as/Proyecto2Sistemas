@@ -635,18 +635,25 @@ int main(int argc, char *argv[]) {
                 // Forma completa de la opción
                 if (strcmp(option, "--create") == 0) {
                     pack_files_to_tar(archive_name, files_to_use, num_files, verbose);
+                    return 0;
                 } else if (strcmp(option, "--update") == 0) {
                     update_file_in_tar(archive_name, files_to_use, num_files, verbose);
+                    return 0;
                 }else if (strcmp(option, "--list") == 0) {
                     list_files_in_tar(archive_name, verbose);
+                    return 0;
                 }else if (strcmp(option, "--append") == 0) {
                     add_file_to_tar(archive_name, files_to_use, num_files, verbose);
+                    return 0;
                 }else if (strcmp(option, "--extract") == 0) {
                     extract_files_from_tar(archive_name, verbose);
+                    return 0;
                 }else if (strcmp(option, "--delete") == 0) {
                     delete_from_tar(archive_name, files_to_use, num_files, verbose);
+                    return 0;
                 }else if (strcmp(option, "--pack") == 0) {
                     defragment_tar(archive_name, verbose);
+                    return 0;
                 }
                 
             } else {
@@ -657,22 +664,22 @@ int main(int argc, char *argv[]) {
                     switch (opt) {
                         case 'c':
                             pack_files_to_tar(archive_name, files_to_use, num_files, verbose);
-                            break;
+                            return 0;
                         case 'u':
                             update_file_in_tar(archive_name, files_to_use, num_files, verbose);
-                            break;
+                            return 0;
                         case 't':
                             list_files_in_tar(archive_name, verbose);
-                            break;
+                            return 0;
                         case 'r':
                             add_file_to_tar(archive_name, files_to_use, num_files, verbose);
-                            break;
+                            return 0;
                         case 'x':
                             extract_files_from_tar(archive_name, verbose);
-                            break;
+                            return 0;
                         case 'p':
                             defragment_tar(archive_name, verbose);
-                            break; 
+                            return 0;
                     }
                 }
             }
