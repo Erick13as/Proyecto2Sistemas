@@ -29,17 +29,6 @@ typedef struct {
     unsigned char data[BLOCK_SIZE];
 } Block; 
 
-size_t find_free_block(FAT *fat) {
-    for (size_t i = 0; i < fat->num_free_blocks; i++) {
-        if (fat->free_blocks[i] != 0) {
-            size_t free_block = fat->free_blocks[i];
-            fat->free_blocks[i] = 0; 
-            return free_block;
-        }
-    }
-    return (size_t)-1; 
-}
-
 char* processFileOption(int argc, char *argv[]) {
     char *archive_name = NULL;
     int i;
@@ -100,9 +89,16 @@ void pack_files_to_tar(const char *tar_filename, char **filenames, int num_files
 
         while ((bytes_read = fread(&block, 1, sizeof(Block), input_file)) > 0) {
             // Mientras se pueda leer un bloque del archivo
-            size_t block_position = find_free_block(&fat); // Índice del bloque libre
             FAT * fat_point = &fat;
-            if (block_position == (size_t)-1) {
+            size_t block_position = -1;
+            for (size_t i = 0; i < fat_point->num_free_blocks; i++) {
+                if (fat_point->free_blocks[i] != 0) {
+                    size_t free_block = fat_point->free_blocks[i];
+                    fat_point->free_blocks[i] = 0; 
+                    block_position = free_block;
+                }
+            }
+            if (block_position == -1) {
                 // Si no hay bloques libres
                 if (verbose >= 2) printf("No hay bloques libres, expandiendo el archivo\n");
                 fseek(archive, 0, SEEK_END); 
@@ -110,7 +106,13 @@ void pack_files_to_tar(const char *tar_filename, char **filenames, int num_files
                 size_t expanded_size = current_size + BLOCK_SIZE; 
                 ftruncate(fileno(archive), expanded_size); 
                 fat_point->free_blocks[fat_point->num_free_blocks++] = current_size; 
-                block_position = find_free_block(&fat);
+                for (size_t i = 0; i < fat_point->num_free_blocks; i++) {
+                    if (fat_point->free_blocks[i] != 0) {
+                        size_t free_block = fat_point->free_blocks[i];
+                        fat_point->free_blocks[i] = 0; 
+                        block_position = free_block;
+                    }
+                }
                 if (verbose >= 2) printf("Nuevo bloque libre en la posición %zu\n", block_position);
             }
 
@@ -294,9 +296,16 @@ void add_file_to_tar(const char *tar_filename, char **filenames, int num_files, 
 
         while ((bytes_read = fread(&block, 1, sizeof(Block), input_file)) > 0) {
             // Mientras se pueda leer un bloque del archivo
-            size_t block_position = find_free_block(&fat); // Índice del bloque libre
             FAT * fat_point = &fat;
-            if (block_position == (size_t)-1) {
+            size_t block_position = -1;
+            for (size_t i = 0; i < fat_point->num_free_blocks; i++) {
+                if (fat_point->free_blocks[i] != 0) {
+                    size_t free_block = fat_point->free_blocks[i];
+                    fat_point->free_blocks[i] = 0; 
+                    block_position = free_block;
+                }
+            }
+            if (block_position == -1) {
                 // Si no hay bloques libres
                 if (verbose >= 2) printf("No hay bloques libres, expandiendo el archivo\n");
                 fseek(tar_file, 0, SEEK_END); 
@@ -304,7 +313,13 @@ void add_file_to_tar(const char *tar_filename, char **filenames, int num_files, 
                 size_t expanded_size = current_size + BLOCK_SIZE; 
                 ftruncate(fileno(tar_file), expanded_size); 
                 fat_point->free_blocks[fat_point->num_free_blocks++] = current_size; 
-                block_position = find_free_block(&fat);
+                for (size_t i = 0; i < fat_point->num_free_blocks; i++) {
+                    if (fat_point->free_blocks[i] != 0) {
+                        size_t free_block = fat_point->free_blocks[i];
+                        fat_point->free_blocks[i] = 0; 
+                        block_position = free_block;
+                    }
+                }
                 if (verbose >= 2) printf("Nuevo bloque libre en la posición %zu\n", block_position);
             }
 
@@ -521,16 +536,29 @@ void update_file_in_tar(const char *tar_filename, char **filenames, int num_file
                 size_t bytes_read;
 
                 while ((bytes_read = fread(&block, 1, sizeof(Block), input_file)) > 0) {
-                    size_t block_position = find_free_block(&fat);
                     FAT * fat_point = &fat;
-                    if (block_position == (size_t)-1) {
+                    size_t block_position = -1;
+                    for (size_t i = 0; i < fat_point->num_free_blocks; i++) {
+                        if (fat_point->free_blocks[i] != 0) {
+                            size_t free_block = fat_point->free_blocks[i];
+                            fat_point->free_blocks[i] = 0; 
+                            block_position = free_block;
+                        }
+                    }
+                    if (block_position == -1) {
                         if (verbose >= 2) printf("No hay bloques libres, expandiendo el archivo\n");
                         fseek(tar_file, 0, SEEK_END); 
                         size_t current_size = ftell(tar_file); 
                         size_t expanded_size = current_size + BLOCK_SIZE; 
                         ftruncate(fileno(tar_file), expanded_size); 
                         fat_point->free_blocks[fat_point->num_free_blocks++] = current_size; 
-                        block_position = find_free_block(&fat);
+                        for (size_t i = 0; i < fat_point->num_free_blocks; i++) {
+                            if (fat_point->free_blocks[i] != 0) {
+                                size_t free_block = fat_point->free_blocks[i];
+                                fat_point->free_blocks[i] = 0; 
+                                block_position = free_block;
+                            }
+                        }
                         if (verbose >= 2) printf("Nuevo bloque libre en la posición %zu\n", block_position);
                     }
 
