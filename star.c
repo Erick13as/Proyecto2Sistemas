@@ -570,7 +570,7 @@ void update_file_in_tar(const char *tar_filename, char **filenames, int num_file
                     fwrite(&block, sizeof(Block), 1, tar_file); 
                     int repeated = 0;
                     for (long k = 0; k < fat_point->num_files; k++) { 
-                        if (strcmp(fat_point->files[k].filename, filenames[i]) == 0) { 
+                        if (strcmp(fat_point->files[k].filename, filename_to_update) == 0) { 
                             fat_point->files[k].block_positions[fat_point->files[k].num_blocks++] = block_position;  
                             fat_point->files[k].file_size += bytes_read; 
                             repeated++; 
@@ -579,7 +579,7 @@ void update_file_in_tar(const char *tar_filename, char **filenames, int num_file
 
                     if (repeated == 0) {
                         FileEntry new_entry;
-                        strncpy(new_entry.filename, filenames[i], MAX_FILENAME_LENGTH); 
+                        strncpy(new_entry.filename, filename_to_update, MAX_FILENAME_LENGTH); 
                         new_entry.file_size = file_size + bytes_read; 
                         new_entry.block_positions[0] = block_position; 
                         new_entry.num_blocks = 1; 
