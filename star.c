@@ -40,23 +40,6 @@ size_t find_free_block(FAT *fat) {
     return (size_t)-1; 
 }
 
-void update_fat(FAT *fat, const char *filename, size_t file_size, size_t block_position, size_t bytes_read) {
-    for (size_t i = 0; i < fat->num_files; i++) { 
-        if (strcmp(fat->files[i].filename, filename) == 0) { 
-            fat->files[i].block_positions[fat->files[i].num_blocks++] = block_position;  
-            fat->files[i].file_size += bytes_read; 
-            return; 
-        }
-    }
-
-    FileEntry new_entry;
-    strncpy(new_entry.filename, filename, MAX_FILENAME_LENGTH); 
-    new_entry.file_size = file_size + bytes_read; 
-    new_entry.block_positions[0] = block_position; 
-    new_entry.num_blocks = 1; 
-    fat->files[fat->num_files++] = new_entry; 
-}
-
 char* processFileOption(int argc, char *argv[]) {
     char *archive_name = NULL;
     int i;
@@ -118,10 +101,10 @@ void pack_files_to_tar(const char *tar_filename, char **filenames, int num_files
         while ((bytes_read = fread(&block, 1, sizeof(Block), input_file)) > 0) {
             // Mientras se pueda leer un bloque del archivo
             size_t block_position = find_free_block(&fat); // Índice del bloque libre
+            FAT * fat_point = &fat;
             if (block_position == (size_t)-1) {
                 // Si no hay bloques libres
                 if (verbose >= 2) printf("No hay bloques libres, expandiendo el archivo\n");
-                FAT * fat_point = &fat;
                 fseek(archive, 0, SEEK_END); 
                 size_t current_size = ftell(archive); 
                 size_t expanded_size = current_size + BLOCK_SIZE; 
@@ -138,7 +121,23 @@ void pack_files_to_tar(const char *tar_filename, char **filenames, int num_files
 
             fseek(archive, block_position, SEEK_SET); 
             fwrite(&block, sizeof(Block), 1, archive); 
-            update_fat(&fat, filenames[i], file_size, block_position, bytes_read); // Actualizar la FAT para que refleje el nuevo bloque
+            int repeated = 0;
+            for (size_t j = 0; j < fat_point->num_files; j++) { 
+                if (strcmp(fat_point->files[j].filename, filenames[i]) == 0) { 
+                    fat_point->files[j].block_positions[fat_point->files[j].num_blocks++] = block_position;  
+                    fat_point->files[j].file_size += bytes_read; 
+                    repeated++; 
+                }
+            }
+
+            if (repeated == 0) {
+                FileEntry new_entry;
+                strncpy(new_entry.filename, filenames[i], MAX_FILENAME_LENGTH); 
+                new_entry.file_size = file_size + bytes_read; 
+                new_entry.block_positions[0] = block_position; 
+                new_entry.num_blocks = 1; 
+                fat_point->files[fat_point->num_files++] = new_entry; 
+            }
 
             file_size += bytes_read;
             block_count++;
@@ -296,10 +295,10 @@ void add_file_to_tar(const char *tar_filename, char **filenames, int num_files, 
         while ((bytes_read = fread(&block, 1, sizeof(Block), input_file)) > 0) {
             // Mientras se pueda leer un bloque del archivo
             size_t block_position = find_free_block(&fat); // Índice del bloque libre
+            FAT * fat_point = &fat;
             if (block_position == (size_t)-1) {
                 // Si no hay bloques libres
                 if (verbose >= 2) printf("No hay bloques libres, expandiendo el archivo\n");
-                FAT * fat_point = &fat;
                 fseek(tar_file, 0, SEEK_END); 
                 size_t current_size = ftell(tar_file); 
                 size_t expanded_size = current_size + BLOCK_SIZE; 
@@ -316,7 +315,23 @@ void add_file_to_tar(const char *tar_filename, char **filenames, int num_files, 
 
             fseek(tar_file, block_position, SEEK_SET); 
             fwrite(&block, sizeof(Block), 1, tar_file); 
-            update_fat(&fat, filenames[i], file_size, block_position, bytes_read); // Actualizar la FAT para que refleje el nuevo bloque
+            int repeated = 0;
+            for (size_t j = 0; j < fat_point->num_files; j++) { 
+                if (strcmp(fat_point->files[j].filename, filenames[i]) == 0) { 
+                    fat_point->files[j].block_positions[fat_point->files[j].num_blocks++] = block_position;  
+                    fat_point->files[j].file_size += bytes_read; 
+                    repeated++; 
+                }
+            }
+
+            if (repeated == 0) {
+                FileEntry new_entry;
+                strncpy(new_entry.filename, filenames[i], MAX_FILENAME_LENGTH); 
+                new_entry.file_size = file_size + bytes_read; 
+                new_entry.block_positions[0] = block_position; 
+                new_entry.num_blocks = 1; 
+                fat_point->files[fat_point->num_files++] = new_entry; 
+            }
 
             file_size += bytes_read;
             block_count++;
@@ -507,9 +522,9 @@ void update_file_in_tar(const char *tar_filename, char **filenames, int num_file
 
                 while ((bytes_read = fread(&block, 1, sizeof(Block), input_file)) > 0) {
                     size_t block_position = find_free_block(&fat);
+                    FAT * fat_point = &fat;
                     if (block_position == (size_t)-1) {
                         if (verbose >= 2) printf("No hay bloques libres, expandiendo el archivo\n");
-                        FAT * fat_point = &fat;
                         fseek(tar_file, 0, SEEK_END); 
                         size_t current_size = ftell(tar_file); 
                         size_t expanded_size = current_size + BLOCK_SIZE; 
@@ -525,7 +540,23 @@ void update_file_in_tar(const char *tar_filename, char **filenames, int num_file
 
                     fseek(tar_file, block_position, SEEK_SET); 
                     fwrite(&block, sizeof(Block), 1, tar_file); 
-                    update_fat(&fat, filename_to_update, file_size, block_position, bytes_read);
+                    int repeated = 0;
+                    for (size_t k = 0; k < fat_point->num_files; k++) { 
+                        if (strcmp(fat_point->files[k].filename, filenames[i]) == 0) { 
+                            fat_point->files[k].block_positions[fat_point->files[k].num_blocks++] = block_position;  
+                            fat_point->files[k].file_size += bytes_read; 
+                            repeated++; 
+                        }
+                    }
+
+                    if (repeated == 0) {
+                        FileEntry new_entry;
+                        strncpy(new_entry.filename, filenames[i], MAX_FILENAME_LENGTH); 
+                        new_entry.file_size = file_size + bytes_read; 
+                        new_entry.block_positions[0] = block_position; 
+                        new_entry.num_blocks = 1; 
+                        fat_point->files[fat_point->num_files++] = new_entry; 
+                    }
 
                     file_size += bytes_read;
                     block_count++;
