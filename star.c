@@ -40,14 +40,6 @@ size_t find_free_block(FAT *fat) {
     return (size_t)-1; 
 }
 
-void expand_archive(FILE *archive, FAT *fat) {
-    fseek(archive, 0, SEEK_END); 
-    size_t current_size = ftell(archive); 
-    size_t expanded_size = current_size + BLOCK_SIZE; 
-    ftruncate(fileno(archive), expanded_size); 
-    fat->free_blocks[fat->num_free_blocks++] = current_size; 
-}
-
 void update_fat(FAT *fat, const char *filename, size_t file_size, size_t block_position, size_t bytes_read) {
     for (size_t i = 0; i < fat->num_files; i++) { 
         if (strcmp(fat->files[i].filename, filename) == 0) { 
@@ -129,7 +121,12 @@ void pack_files_to_tar(const char *tar_filename, char **filenames, int num_files
             if (block_position == (size_t)-1) {
                 // Si no hay bloques libres
                 if (verbose >= 2) printf("No hay bloques libres, expandiendo el archivo\n");
-                expand_archive(archive, &fat); // Expandir el archivo
+                FAT * fat_point = &fat;
+                fseek(archive, 0, SEEK_END); 
+                size_t current_size = ftell(archive); 
+                size_t expanded_size = current_size + BLOCK_SIZE; 
+                ftruncate(fileno(archive), expanded_size); 
+                fat_point->free_blocks[fat_point->num_free_blocks++] = current_size; 
                 block_position = find_free_block(&fat);
                 if (verbose >= 2) printf("Nuevo bloque libre en la posición %zu\n", block_position);
             }
@@ -302,7 +299,12 @@ void add_file_to_tar(const char *tar_filename, char **filenames, int num_files, 
             if (block_position == (size_t)-1) {
                 // Si no hay bloques libres
                 if (verbose >= 2) printf("No hay bloques libres, expandiendo el archivo\n");
-                expand_archive(tar_file, &fat); // Expandir el archivo
+                FAT * fat_point = &fat;
+                fseek(tar_file, 0, SEEK_END); 
+                size_t current_size = ftell(tar_file); 
+                size_t expanded_size = current_size + BLOCK_SIZE; 
+                ftruncate(fileno(tar_file), expanded_size); 
+                fat_point->free_blocks[fat_point->num_free_blocks++] = current_size; 
                 block_position = find_free_block(&fat);
                 if (verbose >= 2) printf("Nuevo bloque libre en la posición %zu\n", block_position);
             }
@@ -507,7 +509,12 @@ void update_file_in_tar(const char *tar_filename, char **filenames, int num_file
                     size_t block_position = find_free_block(&fat);
                     if (block_position == (size_t)-1) {
                         if (verbose >= 2) printf("No hay bloques libres, expandiendo el archivo\n");
-                        expand_archive(tar_file, &fat);
+                        FAT * fat_point = &fat;
+                        fseek(tar_file, 0, SEEK_END); 
+                        size_t current_size = ftell(tar_file); 
+                        size_t expanded_size = current_size + BLOCK_SIZE; 
+                        ftruncate(fileno(tar_file), expanded_size); 
+                        fat_point->free_blocks[fat_point->num_free_blocks++] = current_size; 
                         block_position = find_free_block(&fat);
                         if (verbose >= 2) printf("Nuevo bloque libre en la posición %zu\n", block_position);
                     }
