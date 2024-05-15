@@ -48,11 +48,6 @@ void expand_archive(FILE *archive, FAT *fat) {
     fat->free_blocks[fat->num_free_blocks++] = current_size; 
 }
 
-void write_block(FILE *archive, Block *block, size_t position) {
-    fseek(archive, position, SEEK_SET); 
-    fwrite(block, sizeof(Block), 1, archive); 
-}
-
 void update_fat(FAT *fat, const char *filename, size_t file_size, size_t block_position, size_t bytes_read) {
     for (size_t i = 0; i < fat->num_files; i++) { 
         if (strcmp(fat->files[i].filename, filename) == 0) { 
@@ -144,7 +139,8 @@ void pack_files_to_tar(const char *tar_filename, char **filenames, int num_files
                 memset((char*)&block + bytes_read, 0, sizeof(Block) - bytes_read); // Rellenar con 0s
             }
 
-            write_block(archive, &block, block_position); // Escribir el bloque en el archivo
+            fseek(archive, block_position, SEEK_SET); 
+            fwrite(&block, sizeof(Block), 1, archive); 
             update_fat(&fat, filenames[i], file_size, block_position, bytes_read); // Actualizar la FAT para que refleje el nuevo bloque
 
             file_size += bytes_read;
@@ -316,7 +312,8 @@ void add_file_to_tar(const char *tar_filename, char **filenames, int num_files, 
                 memset((char*)&block + bytes_read, 0, sizeof(Block) - bytes_read); // Rellenar con 0s
             }
 
-            write_block(tar_file, &block, block_position); // Escribir el bloque en el archivo
+            fseek(tar_file, block_position, SEEK_SET); 
+            fwrite(&block, sizeof(Block), 1, tar_file); 
             update_fat(&fat, filenames[i], file_size, block_position, bytes_read); // Actualizar la FAT para que refleje el nuevo bloque
 
             file_size += bytes_read;
@@ -519,7 +516,8 @@ void update_file_in_tar(const char *tar_filename, char **filenames, int num_file
                         memset((char*)&block + bytes_read, 0, sizeof(Block) - bytes_read);
                     }
 
-                    write_block(tar_file, &block, block_position);
+                    fseek(tar_file, block_position, SEEK_SET); 
+                    fwrite(&block, sizeof(Block), 1, tar_file); 
                     update_fat(&fat, filename_to_update, file_size, block_position, bytes_read);
 
                     file_size += bytes_read;
