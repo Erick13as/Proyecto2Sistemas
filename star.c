@@ -129,6 +129,7 @@ void pack_files_to_tar(const char *tar_filename, char **filenames, int files_num
                     fclose(file_received);
                     fclose(tar_file);
                     printf("Archivo %s ya existente en tar\n", filenames[i]);
+                    printf("Creacion del tar con archivos cancelada, se creo un tar vacio\n");
                     return;
                 }
             }
@@ -337,6 +338,7 @@ void add_file_to_tar(const char *tar_filename, char **filenames, int files_num, 
                     fclose(file_received);
                     fclose(tar_file);
                     printf("Archivo %s ya existente en tar\n", filenames[i]);
+                    printf("Agregar archivo al tar cancelado\n");
                     return;
                 }
             }
