@@ -13,16 +13,16 @@
 
 typedef struct {
     char filename[MAX_FILENAME_LENGTH];
-    size_t file_size;
-    size_t block_positions[MAX_BLOCKS_PER_FILE];
-    size_t num_blocks; 
+    long file_size;
+    long block_positions[MAX_BLOCKS_PER_FILE];
+    long num_blocks; 
 } FileEntry;
 
 typedef struct {
     FileEntry files[MAX_FILES];
-    size_t num_files;
-    size_t free_blocks[MAX_BLOCKS];
-    size_t num_free_blocks;
+    long num_files;
+    long free_blocks[MAX_BLOCKS];
+    long num_free_blocks;
 } FAT;
 
 typedef struct {
@@ -82,18 +82,18 @@ void pack_files_to_tar(const char *tar_filename, char **filenames, int num_files
 
         if (verbose >= 2) printf("Agregando archivo %s\n", filenames[i]);
 
-        size_t file_size = 0;
-        size_t block_count = 0;
+        long file_size = 0;
+        long block_count = 0;
         Block block;
-        size_t bytes_read;
+        long bytes_read;
 
         while ((bytes_read = fread(&block, 1, sizeof(Block), input_file)) > 0) {
             // Mientras se pueda leer un bloque del archivo
             FAT * fat_point = &fat;
-            size_t block_position = -1;
-            for (size_t i = 0; i < fat_point->num_free_blocks; i++) {
+            long block_position = -1;
+            for (long i = 0; i < fat_point->num_free_blocks; i++) {
                 if (fat_point->free_blocks[i] != 0) {
-                    size_t free_block = fat_point->free_blocks[i];
+                    long free_block = fat_point->free_blocks[i];
                     fat_point->free_blocks[i] = 0; 
                     block_position = free_block;
                 }
@@ -102,13 +102,13 @@ void pack_files_to_tar(const char *tar_filename, char **filenames, int num_files
                 // Si no hay bloques libres
                 if (verbose >= 2) printf("No hay bloques libres, expandiendo el archivo\n");
                 fseek(archive, 0, SEEK_END); 
-                size_t current_size = ftell(archive); 
-                size_t expanded_size = current_size + BLOCK_SIZE; 
+                long current_size = ftell(archive); 
+                long expanded_size = current_size + BLOCK_SIZE; 
                 ftruncate(fileno(archive), expanded_size); 
                 fat_point->free_blocks[fat_point->num_free_blocks++] = current_size; 
-                for (size_t i = 0; i < fat_point->num_free_blocks; i++) {
+                for (long i = 0; i < fat_point->num_free_blocks; i++) {
                     if (fat_point->free_blocks[i] != 0) {
-                        size_t free_block = fat_point->free_blocks[i];
+                        long free_block = fat_point->free_blocks[i];
                         fat_point->free_blocks[i] = 0; 
                         block_position = free_block;
                     }
@@ -124,7 +124,7 @@ void pack_files_to_tar(const char *tar_filename, char **filenames, int num_files
             fseek(archive, block_position, SEEK_SET); 
             fwrite(&block, sizeof(Block), 1, archive); 
             int repeated = 0;
-            for (size_t j = 0; j < fat_point->num_files; j++) { 
+            for (long j = 0; j < fat_point->num_files; j++) { 
                 if (strcmp(fat_point->files[j].filename, filenames[i]) == 0) { 
                     fat_point->files[j].block_positions[fat_point->files[j].num_blocks++] = block_position;  
                     fat_point->files[j].file_size += bytes_read; 
@@ -181,7 +181,7 @@ void extract_files_from_tar(const char *tar_filename, int verbose) {
     fread(&fat, sizeof(FAT), 1, tar_file);
 
     // Iterar sobre cada archivo en la FAT y extraerlo
-    for (size_t i = 0; i < fat.num_files; i++) {
+    for (long i = 0; i < fat.num_files; i++) {
         FileEntry file_entry = fat.files[i];
         FILE *output_file = fopen(file_entry.filename, "wb");
         if (output_file == NULL) {
@@ -193,14 +193,14 @@ void extract_files_from_tar(const char *tar_filename, int verbose) {
             printf("Extrayendo archivo: %s\n", file_entry.filename);
         }
 
-        size_t file_size = 0;
+        long file_size = 0;
         // Iterar sobre cada bloque del archivo y escribirlo en el archivo de salida
-        for (size_t j = 0; j < file_entry.num_blocks; j++) {
+        for (long j = 0; j < file_entry.num_blocks; j++) {
             Block block;
             fseek(tar_file, file_entry.block_positions[j], SEEK_SET);
             fread(&block, sizeof(Block), 1, tar_file);
 
-            size_t bytes_to_write = (file_size + sizeof(Block) > file_entry.file_size) ? file_entry.file_size - file_size : sizeof(Block);
+            long bytes_to_write = (file_size + sizeof(Block) > file_entry.file_size) ? file_entry.file_size - file_size : sizeof(Block);
             fwrite(&block, 1, bytes_to_write, output_file);
 
             file_size += bytes_to_write;
@@ -239,7 +239,7 @@ void list_files_in_tar(const char *tar_filename, int verbose) {
     fread(&fat, sizeof(FAT), 1, tar_file);
 
     // Iterar sobre cada archivo en la FAT y mostrar su información
-    for (size_t i = 0; i < fat.num_files; i++) {
+    for (long i = 0; i < fat.num_files; i++) {
         FileEntry file_entry = fat.files[i];
         printf("Nombre: %s, Tamaño: %zu bytes\n", file_entry.filename, file_entry.file_size);
     }
@@ -270,10 +270,10 @@ void add_file_to_tar(const char *tar_filename, char **filenames, int num_files, 
     fread(&fat, sizeof(FAT), 1, tar_file);
 
     // Buscar el último bloque ocupado en el archivo
-    size_t last_block = 0;
-    for (size_t i = 0; i < fat.num_files; i++) {
+    long last_block = 0;
+    for (long i = 0; i < fat.num_files; i++) {
         FileEntry file_entry = fat.files[i];
-        for (size_t j = 0; j < file_entry.num_blocks; j++) {
+        for (long j = 0; j < file_entry.num_blocks; j++) {
             if (file_entry.block_positions[j] > last_block) {
                 last_block = file_entry.block_positions[j];
             }
@@ -289,18 +289,18 @@ void add_file_to_tar(const char *tar_filename, char **filenames, int num_files, 
         }
 
         if (verbose >= 2) printf("Agregando archivo %s\n", filenames[i]);
-        size_t file_size = 0;
-        size_t block_count = 0;
+        long file_size = 0;
+        long block_count = 0;
         Block block;
-        size_t bytes_read;
+        long bytes_read;
 
         while ((bytes_read = fread(&block, 1, sizeof(Block), input_file)) > 0) {
             // Mientras se pueda leer un bloque del archivo
             FAT * fat_point = &fat;
-            size_t block_position = -1;
-            for (size_t i = 0; i < fat_point->num_free_blocks; i++) {
+            long block_position = -1;
+            for (long i = 0; i < fat_point->num_free_blocks; i++) {
                 if (fat_point->free_blocks[i] != 0) {
-                    size_t free_block = fat_point->free_blocks[i];
+                    long free_block = fat_point->free_blocks[i];
                     fat_point->free_blocks[i] = 0; 
                     block_position = free_block;
                 }
@@ -309,13 +309,13 @@ void add_file_to_tar(const char *tar_filename, char **filenames, int num_files, 
                 // Si no hay bloques libres
                 if (verbose >= 2) printf("No hay bloques libres, expandiendo el archivo\n");
                 fseek(tar_file, 0, SEEK_END); 
-                size_t current_size = ftell(tar_file); 
-                size_t expanded_size = current_size + BLOCK_SIZE; 
+                long current_size = ftell(tar_file); 
+                long expanded_size = current_size + BLOCK_SIZE; 
                 ftruncate(fileno(tar_file), expanded_size); 
                 fat_point->free_blocks[fat_point->num_free_blocks++] = current_size; 
-                for (size_t i = 0; i < fat_point->num_free_blocks; i++) {
+                for (long i = 0; i < fat_point->num_free_blocks; i++) {
                     if (fat_point->free_blocks[i] != 0) {
-                        size_t free_block = fat_point->free_blocks[i];
+                        long free_block = fat_point->free_blocks[i];
                         fat_point->free_blocks[i] = 0; 
                         block_position = free_block;
                     }
@@ -331,7 +331,7 @@ void add_file_to_tar(const char *tar_filename, char **filenames, int num_files, 
             fseek(tar_file, block_position, SEEK_SET); 
             fwrite(&block, sizeof(Block), 1, tar_file); 
             int repeated = 0;
-            for (size_t j = 0; j < fat_point->num_files; j++) { 
+            for (long j = 0; j < fat_point->num_files; j++) { 
                 if (strcmp(fat_point->files[j].filename, filenames[i]) == 0) { 
                     fat_point->files[j].block_positions[fat_point->files[j].num_blocks++] = block_position;  
                     fat_point->files[j].file_size += bytes_read; 
@@ -393,19 +393,19 @@ void delete_from_tar(const char *tar_filename, char **filenames, int num_files, 
         bool found = false;
 
         // Iterar sobre los archivos en la FAT y encontrar el archivo a eliminar
-        for (size_t j = 0; j < fat.num_files; j++) {
+        for (long j = 0; j < fat.num_files; j++) {
             FileEntry *file_entry = &fat.files[j];
             if (strcmp(file_entry->filename, filename_to_delete) == 0) {
                 found = true;
 
                 // Eliminar bloques ocupados por el archivo de la lista de bloques libres
-                for (size_t k = 0; k < file_entry->num_blocks; k++) {
-                    size_t block_position = file_entry->block_positions[k];
+                for (long k = 0; k < file_entry->num_blocks; k++) {
+                    long block_position = file_entry->block_positions[k];
                     fat.free_blocks[fat.num_free_blocks++] = block_position;
                 }
 
                 // Mover las entradas restantes de la FAT para cerrar el espacio
-                for (size_t k = j; k < fat.num_files - 1; k++) {
+                for (long k = j; k < fat.num_files - 1; k++) {
                     fat.files[k] = fat.files[k + 1];
                 }
 
@@ -449,12 +449,12 @@ void defragment_tar(const char *tar_filename, int verbose) {
     FAT fat;
     fread(&fat, sizeof(FAT), 1, tar_file);
 
-    size_t new_block_position = sizeof(FAT);
-    for (size_t i = 0; i < fat.num_files; i++) {
+    long new_block_position = sizeof(FAT);
+    for (long i = 0; i < fat.num_files; i++) {
         FileEntry *entry = &fat.files[i];
-        size_t file_size = 0;
+        long file_size = 0;
 
-        for (size_t j = 0; j < entry->num_blocks; j++) {
+        for (long j = 0; j < entry->num_blocks; j++) {
             Block block;
             fseek(tar_file, entry->block_positions[j], SEEK_SET);
             fread(&block, sizeof(Block), 1, tar_file);
@@ -477,7 +477,7 @@ void defragment_tar(const char *tar_filename, int verbose) {
     }
 
     fat.num_free_blocks = 0;
-    size_t remaining_space = new_block_position;
+    long remaining_space = new_block_position;
     while (remaining_space < fat.free_blocks[fat.num_free_blocks - 1]) {
         fat.free_blocks[fat.num_free_blocks++] = remaining_space;
         remaining_space += sizeof(Block);
@@ -514,13 +514,13 @@ void update_file_in_tar(const char *tar_filename, char **filenames, int num_file
         char *filename_to_update = filenames[i];
         bool found = false;
 
-        for (size_t j = 0; j < fat.num_files; j++) {
+        for (long j = 0; j < fat.num_files; j++) {
             FileEntry *file_entry = &fat.files[j];
             if (strcmp(file_entry->filename, filename_to_update) == 0) {
                 found = true;
 
-                for (size_t k = 0; k < file_entry->num_blocks; k++) {
-                    size_t block_position = file_entry->block_positions[k];
+                for (long k = 0; k < file_entry->num_blocks; k++) {
+                    long block_position = file_entry->block_positions[k];
                     fat.free_blocks[fat.num_free_blocks++] = block_position;
                 }
 
@@ -530,17 +530,17 @@ void update_file_in_tar(const char *tar_filename, char **filenames, int num_file
                     continue;
                 }
 
-                size_t file_size = 0;
-                size_t block_count = 0;
+                long file_size = 0;
+                long block_count = 0;
                 Block block;
-                size_t bytes_read;
+                long bytes_read;
 
                 while ((bytes_read = fread(&block, 1, sizeof(Block), input_file)) > 0) {
                     FAT * fat_point = &fat;
-                    size_t block_position = -1;
-                    for (size_t i = 0; i < fat_point->num_free_blocks; i++) {
+                    long block_position = -1;
+                    for (long i = 0; i < fat_point->num_free_blocks; i++) {
                         if (fat_point->free_blocks[i] != 0) {
-                            size_t free_block = fat_point->free_blocks[i];
+                            long free_block = fat_point->free_blocks[i];
                             fat_point->free_blocks[i] = 0; 
                             block_position = free_block;
                         }
@@ -548,13 +548,13 @@ void update_file_in_tar(const char *tar_filename, char **filenames, int num_file
                     if (block_position == -1) {
                         if (verbose >= 2) printf("No hay bloques libres, expandiendo el archivo\n");
                         fseek(tar_file, 0, SEEK_END); 
-                        size_t current_size = ftell(tar_file); 
-                        size_t expanded_size = current_size + BLOCK_SIZE; 
+                        long current_size = ftell(tar_file); 
+                        long expanded_size = current_size + BLOCK_SIZE; 
                         ftruncate(fileno(tar_file), expanded_size); 
                         fat_point->free_blocks[fat_point->num_free_blocks++] = current_size; 
-                        for (size_t i = 0; i < fat_point->num_free_blocks; i++) {
+                        for (long i = 0; i < fat_point->num_free_blocks; i++) {
                             if (fat_point->free_blocks[i] != 0) {
-                                size_t free_block = fat_point->free_blocks[i];
+                                long free_block = fat_point->free_blocks[i];
                                 fat_point->free_blocks[i] = 0; 
                                 block_position = free_block;
                             }
@@ -569,7 +569,7 @@ void update_file_in_tar(const char *tar_filename, char **filenames, int num_file
                     fseek(tar_file, block_position, SEEK_SET); 
                     fwrite(&block, sizeof(Block), 1, tar_file); 
                     int repeated = 0;
-                    for (size_t k = 0; k < fat_point->num_files; k++) { 
+                    for (long k = 0; k < fat_point->num_files; k++) { 
                         if (strcmp(fat_point->files[k].filename, filenames[i]) == 0) { 
                             fat_point->files[k].block_positions[fat_point->files[k].num_blocks++] = block_position;  
                             fat_point->files[k].file_size += bytes_read; 
@@ -751,13 +751,37 @@ int main(int argc, char *argv[]) {
 }
 
 //gcc star.c -o star
-//./star -cvf prueba-paq.tar prueba.txt
-//./star --create --verbose --file prueba-paq.tar prueba.txt
+
+//---Pruebas---
+
+//---Crear tar---
+//./star -cvf prueba-paq.tar prueba.txt prueba2.docx prueba3.pdf
+//Ejemplo con palabras completas
+//./star --create --verbose --file prueba-paq.tar prueba.txt prueba2.docx prueba3.pdf
+//Ejemplo con vv
+//./star -cvvf prueba-paq.tar prueba.txt prueba2.docx prueba3.pdf
+
+//---Extraer tar---
+//./star -cvf prueba-paq.tar prueba.txt prueba2.docx prueba3.pdf
+//./star -xvf prueba-paq.tar
+
+//---Listar contenido del tar---
+//./star -cvf prueba-paq.tar prueba.txt prueba2.docx prueba3.pdf
+//./star -tvf prueba-paq.tar
+
+//---Agregar archivo al tar---
+//./star -cvf prueba-paq.tar prueba.txt prueba2.docx
+//./star -rvf prueba-paq.tar prueba3.pdf
+
+//---Actualizar algun archivo del tar---
 //./star -cvf prueba-paq.tar prueba.txt prueba2.docx prueba3.pdf
 //./star -uvf prueba-paq.tar prueba.txt
-//./star -tvf prueba-paq.tar
-//./star -rvf prueba-paq.tar prueba3.pdf
-//./star -xvf prueba-paq.tar
+
+//---Borrar algun archivo del tar---
+//./star -cvf prueba-paq.tar prueba.txt prueba2.docx prueba3.pdf
+//./star --delete -vf prueba-paq.tar prueba2.docx
+
+//---Desfragmentar tar---
+//./star -cvf prueba-paq.tar prueba.txt prueba2.docx prueba3.pdf
 //./star --delete -vf prueba-paq.tar prueba2.docx
 //./star -pvf prueba-paq.tar
-//./star -xvf prueba-paq.tar
