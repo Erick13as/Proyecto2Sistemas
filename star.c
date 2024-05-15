@@ -70,11 +70,6 @@ void update_fat(FAT *fat, const char *filename, size_t file_size, size_t block_p
     fat->files[fat->num_files++] = new_entry; 
 }
 
-void write_fat(FILE *archive, FAT *fat) {
-    fseek(archive, 0, SEEK_SET); 
-    fwrite(fat, sizeof(FAT), 1, archive); 
-}
-
 char* processFileOption(int argc, char *argv[]) {
     char *archive_name = NULL;
     int i;
@@ -165,7 +160,8 @@ void pack_files_to_tar(const char *tar_filename, char **filenames, int num_files
         fclose(input_file);
     }
 
-    write_fat(archive, &fat);
+    fseek(archive, 0, SEEK_SET); 
+    fwrite(&fat, sizeof(FAT), 1, archive); 
     fclose(archive);
 
     if (verbose >= 2) {
@@ -336,7 +332,8 @@ void add_file_to_tar(const char *tar_filename, char **filenames, int num_files, 
         fclose(input_file);
     }
 
-    write_fat(tar_file, &fat);
+    fseek(tar_file, 0, SEEK_SET); 
+    fwrite(&fat, sizeof(FAT), 1, tar_file); 
     fclose(tar_file);
 
     if (verbose >= 2) {
