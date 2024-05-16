@@ -58,7 +58,7 @@ void pack_files_to_tar(const char *tar_filename, char **filenames, int files_num
     if (verbose == 1) printf("Creando archivo %s\n", tar_filename);
     else if (verbose >= 2) printf("Comenzando a crear el archivo %s\n", tar_filename);
 
-    FILE *tar_file = fopen(tar_filename, "wb"); // Abrir archivo como binario para escritura
+    FILE *tar_file = fopen(tar_filename, "wb");
 
     if (tar_file == NULL) {
         fprintf(stderr, "Error al abrir el archivo %s\n", tar_filename);
@@ -66,15 +66,15 @@ void pack_files_to_tar(const char *tar_filename, char **filenames, int files_num
     }
 
     FAT fat;
-    memset(&fat, 0, sizeof(FAT)); // Inicializar FAT con 0s
+    memset(&fat, 0, sizeof(FAT)); 
 
-    fat.free_blocks[0] = sizeof(FAT); // El primer bloque libre está después de la FAT
-    fat.free_blocks_num = 1; // Solo hay un bloque libre
+    fat.free_blocks[0] = sizeof(FAT); 
+    fat.free_blocks_num = 1; 
 
-    fwrite(&fat, sizeof(FAT), 1, tar_file); // Escribir la FAT en el archivo (posición 0)
+    fwrite(&fat, sizeof(FAT), 1, tar_file); 
 
     for (int i = 0; i < files_num; i++) {
-        FILE *file_received = fopen(filenames[i], "rb"); // Abrir archivo como binario para lectura
+        FILE *file_received = fopen(filenames[i], "rb"); 
         if (file_received == NULL) {
             fprintf(stderr, "Error al abrir el archivo %s\n", filenames[i]);
             exit(1);
@@ -134,7 +134,6 @@ void pack_files_to_tar(const char *tar_filename, char **filenames, int files_num
 
             fseek(tar_file, block_position, SEEK_SET); 
             fwrite(&block, sizeof(Block), 1, tar_file); 
-            int repeated = 0;
             for (long j = 0; j < fat_point->files_num; j++) { 
                 if (strcmp(fat_point->files[j].filename, filenames[i]) == 0) { 
                     fclose(file_received);
@@ -145,14 +144,12 @@ void pack_files_to_tar(const char *tar_filename, char **filenames, int files_num
                 }
             }
 
-            if (repeated == 0) {
-                FileEntry new_entry;
-                strncpy(new_entry.filename, filenames[i], MAX_FILENAME_LENGTH); 
-                new_entry.file_size = file_size + bytes_read; 
-                new_entry.block_positions[0] = block_position; 
-                new_entry.blocks_num = 1; 
-                fat_point->files[fat_point->files_num++] = new_entry; 
-            }
+            FileEntry new_entry;
+            strncpy(new_entry.filename, filenames[i], MAX_FILENAME_LENGTH); 
+            new_entry.file_size = file_size + bytes_read; 
+            new_entry.block_positions[0] = block_position; 
+            new_entry.blocks_num = 1; 
+            fat_point->files[fat_point->files_num++] = new_entry; 
 
             file_size += bytes_read;
             block_num++;
@@ -182,14 +179,12 @@ void extract_files_from_tar(const char *tar_filename, int verbose) {
     if (verbose == 1) printf("Extrayendo archivos del archivo %s\n", tar_filename);
     else if (verbose >= 2) printf("Comenzando a extraer archivos del archivo %s\n", tar_filename);
 
-    // Abrir el archivo TAR en modo de lectura binaria
     FILE *tar_file = fopen(tar_filename, "rb");
     if (tar_file == NULL) {
         printf("Error al abrir el archivo TAR para lectura.\n");
         return;
     }
 
-    // Leer la FAT del archivo TAR
     FAT fat;
     fread(&fat, sizeof(FAT), 1, tar_file);
 
@@ -226,7 +221,6 @@ void extract_files_from_tar(const char *tar_filename, int verbose) {
         }
     }
 
-    // Cerrar el archivo TAR
     fclose(tar_file);
 
     if (verbose >= 2) {
@@ -240,14 +234,12 @@ void list_files_in_tar(const char *tar_filename, int verbose) {
     if (verbose == 1) printf("Listando archivos en el archivo %s\n", tar_filename);
     else if (verbose >= 2) printf("Comenzando a listar archivos en el archivo %s\n", tar_filename);
 
-    // Abrir el archivo TAR en modo de lectura binaria
     FILE *tar_file = fopen(tar_filename, "rb");
     if (tar_file == NULL) {
         printf("Error al abrir el archivo TAR para lectura.\n");
         return;
     }
 
-    // Leer la FAT del archivo TAR
     FAT fat;
     fread(&fat, sizeof(FAT), 1, tar_file);
 
@@ -257,7 +249,6 @@ void list_files_in_tar(const char *tar_filename, int verbose) {
         printf("Nombre: %s, Tamaño: %zu bytes\n", file_entry.filename, file_entry.file_size);
     }
 
-    // Cerrar el archivo TAR
     fclose(tar_file);
 
     if (verbose >= 2) {
@@ -271,14 +262,12 @@ void add_file_to_tar(const char *tar_filename, char **filenames, int files_num, 
     if (verbose == 1) printf("Añadiendo archivos al archivo %s\n", tar_filename);
     else if (verbose >= 2) printf("Comenzando a añadir archivos al archivo %s\n", tar_filename);
 
-    // Abrir el archivo TAR en modo de lectura y escritura binaria
     FILE *tar_file = fopen(tar_filename, "r+b");
     if (tar_file == NULL) {
         printf("Error al abrir el archivo TAR para lectura y escritura.\n");
         return;
     }
 
-    // Leer la FAT del archivo TAR
     FAT fat;
     fread(&fat, sizeof(FAT), 1, tar_file);
 
@@ -354,7 +343,6 @@ void add_file_to_tar(const char *tar_filename, char **filenames, int files_num, 
 
             fseek(tar_file, block_position, SEEK_SET); 
             fwrite(&block, sizeof(Block), 1, tar_file); 
-            int repeated = 0;
             for (long j = 0; j < fat_point->files_num; j++) { 
                 if (strcmp(fat_point->files[j].filename, filenames[i]) == 0) { 
                     fclose(file_received);
@@ -365,14 +353,12 @@ void add_file_to_tar(const char *tar_filename, char **filenames, int files_num, 
                 }
             }
 
-            if (repeated == 0) {
-                FileEntry new_entry;
-                strncpy(new_entry.filename, filenames[i], MAX_FILENAME_LENGTH); 
-                new_entry.file_size = file_size + bytes_read; 
-                new_entry.block_positions[0] = block_position; 
-                new_entry.blocks_num = 1; 
-                fat_point->files[fat_point->files_num++] = new_entry; 
-            }
+            FileEntry new_entry;
+            strncpy(new_entry.filename, filenames[i], MAX_FILENAME_LENGTH); 
+            new_entry.file_size = file_size + bytes_read; 
+            new_entry.block_positions[0] = block_position; 
+            new_entry.blocks_num = 1; 
+            fat_point->files[fat_point->files_num++] = new_entry; 
 
             file_size += bytes_read;
             block_num++;
@@ -402,14 +388,12 @@ void delete_from_tar(const char *tar_filename, char **filenames, int files_num, 
     if (verbose == 1) printf("Eliminando archivos del archivo %s\n", tar_filename);
     else if (verbose >= 2) printf("Comenzando a eliminar archivos del archivo %s\n", tar_filename);
 
-    // Abrir el archivo TAR en modo de lectura y escritura binaria
     FILE *tar_file = fopen(tar_filename, "r+b");
     if (tar_file == NULL) {
         printf("Error al abrir el archivo TAR para lectura y escritura.\n");
         return;
     }
 
-    // Leer la FAT del archivo TAR
     FAT fat;
     fread(&fat, sizeof(FAT), 1, tar_file);
 
@@ -449,7 +433,6 @@ void delete_from_tar(const char *tar_filename, char **filenames, int files_num, 
         }
     }
 
-    // Escribir la FAT actualizada en el archivo TAR
     fseek(tar_file, 0, SEEK_SET);
     fwrite(&fat, sizeof(FAT), 1, tar_file);
 
