@@ -8,7 +8,7 @@
 #define BLOCK_SIZE (256 * 1024) 
 #define MAX_FILES 100 
 #define MAX_FILENAME_LENGTH 256
-#define MAX_BLOCKS_PER_FILE 64 
+#define MAX_BLOCKS_PER_FILE 64 //Cambiar en caso de necesitar usar archivos mas grandes
 #define MAX_BLOCKS MAX_BLOCKS_PER_FILE * MAX_FILES
 
 typedef struct {
@@ -86,6 +86,17 @@ void pack_files_to_tar(const char *tar_filename, char **filenames, int files_num
         long block_num = 0;
         Block block;
         long bytes_read;
+
+        // Verificar el tamaño del archivo
+        fseek(file_received, 0, SEEK_END); 
+        long check_size = ftell(file_received); 
+        rewind(file_received);
+        if (check_size > 16 * 1024 * 1024) {
+            printf("Error: El archivo %s excede el tamaño máximo permitido de 16MB.\n", filenames[i]);
+            fclose(file_received);
+            fclose(tar_file);
+            return; 
+        }
 
         while ((bytes_read = fread(&block, 1, sizeof(Block), file_received)) > 0) {
             // Mientras se pueda leer un bloque del archivo
@@ -295,6 +306,17 @@ void add_file_to_tar(const char *tar_filename, char **filenames, int files_num, 
         long block_num = 0;
         Block block;
         long bytes_read;
+
+        // Verificar el tamaño del archivo
+        fseek(file_received, 0, SEEK_END); 
+        long check_size = ftell(file_received); 
+        rewind(file_received);
+        if (check_size > 16 * 1024 * 1024) {
+            printf("Error: El archivo %s excede el tamaño máximo permitido de 16MB.\n", filenames[i]);
+            fclose(file_received);
+            fclose(tar_file);
+            return; 
+        }
 
         while ((bytes_read = fread(&block, 1, sizeof(Block), file_received)) > 0) {
             // Mientras se pueda leer un bloque del archivo
@@ -538,6 +560,17 @@ void update_file_in_tar(const char *tar_filename, char **filenames, int files_nu
                 long block_num = 0;
                 Block block;
                 long bytes_read;
+
+                // Verificar el tamaño del archivo
+                fseek(file_received, 0, SEEK_END); 
+                long check_size = ftell(file_received); 
+                rewind(file_received);
+                if (check_size > 16 * 1024 * 1024) {
+                    printf("Error: El archivo %s excede el tamaño máximo permitido de 16MB.\n", filenames[i]);
+                    fclose(file_received);
+                    fclose(tar_file);
+                    return; 
+                }
 
                 while ((bytes_read = fread(&block, 1, sizeof(Block), file_received)) > 0) {
                     FAT * fat_point = &fat;
